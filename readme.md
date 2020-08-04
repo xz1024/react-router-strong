@@ -1,3 +1,32 @@
-## react-router-strong
+# react-router-strong
 
-> 背景： 由于 react-router 本身不能像 vue 那样 直接定义路由配置项，和 beforeEach 等拦截器，以及 keep-alive 等功能，本插件是对 react-router 的扩展
+## Install
+
+```bash
+npm install react-router-strong --save
+# or
+yarn add react-router-strong
+```
+
+---
+
+```javascript
+import React from 'react'
+import { HashRouter as Router, Route } from 'react-router-dom'
+import RouterStrong from 'react-router-strong'
+
+import Home from './views/Home'
+
+const App = () => (
+  <RouterStrong>
+    <Router>
+      <Switch>
+        <Route exact path="/home" component={Home} />
+        <Route render={() => <div>404 Not Found</div>} />
+      </Switch>
+    </Router>
+  </RouterStrong>
+)
+
+export default App
+```

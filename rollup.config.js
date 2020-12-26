@@ -3,36 +3,36 @@ import babel from 'rollup-plugin-babel'
 import { uglify } from 'rollup-plugin-uglify'
 
 export default [
-  {
-    input: 'src/index.js',
-    output: {
-      name: 'RouterStrong',
-      file: 'dist/index.js',
-      format: 'cjs',
-      sourcemap: true,
+    {
+        input: 'src/index.js',
+        output: {
+            name: 'ReactRouterStrong',
+            file: 'dist/index.js',
+            format: 'cjs',
+            sourcemap: true,
+        },
+        external: ['react', 'prop-types', 'react-router-dom'],
+        plugins: [
+            resolve(),
+            babel({
+                exclude: 'node_modules/**',
+            }),
+        ],
     },
-    external: ['react', 'prop-types', 'react-router-dom'],
-    plugins: [
-      resolve(),
-      babel({
-        exclude: 'node_modules/**',
-      }),
-    ],
-  },
-  {
-    input: 'src/index.js',
-    output: {
-      name: 'RouterStrong',
-      file: 'dist/index.min.js',
-      format: 'umd',
+    {
+        input: 'src/index.js',
+        output: {
+            name: 'RouterStrong',
+            file: 'dist/index.min.js',
+            format: 'cjs',
+        },
+        external: ['react', 'prop-types', 'react-router-dom'],
+        plugins: [
+            resolve(),
+            babel({
+                exclude: 'node_modules/**',
+            }),
+            uglify(),
+        ],
     },
-    external: ['react', 'prop-types', 'react-router-dom'],
-    plugins: [
-      resolve(),
-      babel({
-        exclude: 'node_modules/**',
-      }),
-      uglify(),
-    ],
-  },
 ]

@@ -4,28 +4,35 @@
 
 ```bash
 npm install react-router-strong --save
-# or
-yarn add react-router-strong
+ 
 ```
 
 ---
 
 ```javascript
 import React from 'react'
-import { HashRouter as Router, Route } from 'react-router-dom'
 import RouterStrong from 'react-router-strong'
+import A from '../views/A'
+import B from '../views/B'
 
-import Home from './views/Home'
-
+const config = [
+    {
+        name: 'a',
+        path: '/a',
+        component: A
+    },
+    {
+        name: 'b',
+        path: '/b',
+        component: B
+    }
+]
+ 
 const App = () => (
-  <RouterStrong>
-    <Router>
-      <Switch>
-        <Route exact path="/home" component={Home} />
-        <Route render={() => <div>404 Not Found</div>} />
-      </Switch>
-    </Router>
-  </RouterStrong>
+    <RouterStrong
+        mode='history'
+        routes={config}
+    />
 )
 
 export default App

@@ -12,28 +12,44 @@ npm install react-router-strong --save
 ```javascript
 import React from 'react'
 import RouterStrong from 'react-router-strong'
-import A from '../views/A'
-import B from '../views/B'
-
-const config = [
-    {
-        name: 'a',
-        path: '/a',
-        component: A
-    },
-    {
-        name: 'b',
-        path: '/b',
-        component: B
-    }
-]
+import Home from '../views/Home'
+import Layout from './views/Layout'
+import Car from './views/Car'
+import BWM from './views/BWM'
  
-const App = () => (
-    <RouterStrong
-        mode='history'
-        routes={config}
-    />
-)
 
-export default App
+const routes = [
+    {
+        path: "/app",
+        component: Layout,
+        redirect: '/app/home',
+        children: [
+            {
+                path: '/app/home', aliasPath: ['/home'], component: Home
+            },
+            {
+                path: '/app/car',
+                component: Car,
+                children: [
+                    {
+                        path: '/app/car/bwm', component: BWM
+                    }
+                ]
+            },
+        ]
+    },
+]
+export default () => (
+    <div className="app">
+        <RouterStrong
+            indexPath='/app/home'
+            noFoundPath='/404'
+            mode={'history'}
+            isSwitch={true}
+            routes={routes}
+        >
+        </RouterStrong>
+    </div>
+);
+
 ```

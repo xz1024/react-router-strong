@@ -1,32 +1,154 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+import { Prompt } from 'react-router'
+import { wrapParent, getRoute } from './utils'
+import { preHistory, curHistory, __win_AllRoutes } from './key'
 import { BrowserRouter, HashRouter, Route, Switch, Redirect } from 'react-router-dom';
-class RouterStrong extends React.Component {
-    render () {
-        const { routes = [], mode, isSwitch = true, indexPath = '/', noFoundPath = '/404' } = this.props
-        const Router = mode === 'history' ? BrowserRouter : HashRouter;
-        function wrapParent (r, comp = null, props) {
-            let target = r.component ? <r.component  {...props}> {r.children ? comp : null}</r.component> : null;
-            if (r.__parent && r.__parent.component) {
-                return wrapParent(r.__parent, target, props)
-            }
-            return target
+let __init__ = false
+
+export { rsUtils } from './utils';
+
+class AsyncRoute extends React.Component {
+    constructor(props) {
+        super();
+        this.state = {
+            finished: false
         }
+    }
+    static propsTypes = {
+        beforeEach: PropTypes.func,
+    }
+    componentDidMount () {
+        const { beforeEach } = this.props;
+        beforeEach && beforeEach(
+            window[curHistory].route,
+            window[preHistory].route,
+            (params) => {
+                if (params && params.path) {
+                    let r = getRoute(params.path)
+                    if (r.redirect) {
+                        window[curHistory].push(r.redirect);
+                        return
+                    }
+                    window[curHistory].push(params.path);
+                    return
+                }
+                __init__ = true;
+                this.setState({
+                    finished: true
+                })
+            }
+        );
+    }
+    render () {
+        const { wp } = this.props
+        return this.state.finished ? wp : null
+    }
+}
+class RouterStrong extends React.Component {
+    constructor(props) {
+        super();
+        this.pendding = true
+        this.state = {
+            init: !props.beforeEach
+        }
+    }
+    static propsTypes = {
+        routes: PropTypes.array.isRequired,
+        mode: PropTypes.string,
+        beforeEach: PropTypes.func,
+        isSwitch: PropTypes.bool,
+    }
+    __beforeEach (location, action) {
+        // console.log("location:", location, "\n", "action:", action)
+        const { pathname } = location
+        const { beforeEach } = this.props
+
+        this.pendding = true;
+        let to = getRoute(pathname);
+        beforeEach && beforeEach(
+            to,
+            window[preHistory].route,
+            (params) => {
+                this.pendding = false
+                if (to.redirect) {
+                    window[curHistory].push(to.redirect);
+                    return
+                }
+                if (params && params.path) {
+                    let r = getRoute(params.path)
+                    if (r.redirect) {
+                        window[curHistory].push(r.redirect);
+                        return
+                    }
+                    window[curHistory].push(params.path);
+                    return
+                }
+                if (action === 'POP') {
+                    //回退
+                    console.log("Backing up...")
+                    window[curHistory].goBack()
+                } else {
+                    //跳转
+                    console.log(`window[curHistory].push(${pathname})`)
+                    window[curHistory].push(pathname)
+                }
+            }
+        );
+        return !beforeEach
+    }
+    __Prompt () {
+        return (
+            <Prompt
+                message={(location, action) => {
+                    // if (action === 'POP') {
+                    //     console.log("Backing up...")
+                    // }
+                    if (!this.pendding) {
+                        return true
+                    }
+                    return this.__beforeEach(location, action);
+                }}
+            />
+        )
+    }
+    render () {
+        const {
+            routes = [],
+            mode,
+            isSwitch = true,
+            indexPath = '/',
+            noFoundPath = '/404',
+            beforeEach
+        } = this.props;
+        if (!beforeEach) {
+            __init__ = true
+        }
+        const Router = mode === 'history' ? BrowserRouter : HashRouter;
+
         let AllRoutes = routes.map((r) => {
             const route = (r) => {
                 const routeParams = (r) => ({
                     key: r.path,
                     exact: true,
                     path: r.path,
+                    __r: r,
                     __parent: r.__parent,
-                    __redirect: r.redirect,
                     render: (props) => {
+                        props.history = { ...props.history, route: r };
+                        window[preHistory] = window[curHistory] || {};
+                        window[curHistory] = props.history;
+                        console.log('render-props', props);
+                        this.pendding = true
                         const merge = {
                             ...props,
+                            route: r
                         };
                         if (r.redirect) {
-                            return <Redirect {...props} to={r.redirect} />
+                            return <Redirect {...merge} to={r.redirect} />
                         }
-                        return wrapParent(r, null, props)
+                        let wp = wrapParent(r, null, merge)
+                        return __init__ ? wp : <AsyncRoute wp={wp} beforeEach={beforeEach} />
                     },
                 });
 
@@ -57,10 +179,13 @@ class RouterStrong extends React.Component {
             <Route key={indexPath} exact path="/" render={() => <Redirect to={indexPath} push />} />,
             <Route key={noFoundPath} render={() => <Redirect to={noFoundPath} />} />
         ]);
-        //  console.log('AllRoutes', AllRoutes)
+        window[__win_AllRoutes] = AllRoutes;
+        console.log(`window['${__win_AllRoutes}']:`, window[__win_AllRoutes])
+
         return (
             <Router>
                 {this.props.children}
+                {this.__Prompt()}
                 {
                     isSwitch ? <Switch>  {AllRoutes}  </Switch> : AllRoutes
                 }

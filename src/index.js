@@ -1,12 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Prompt } from 'react-router'
-import { wrapParent, getRoute } from './utils'
+import { wrapParent, getRoute, locationEqual } from './utils'
 import { preHistory, curHistory, __win_AllRoutes } from './key'
 import { BrowserRouter, HashRouter, Route, Switch, Redirect } from 'react-router-dom';
-let __init__ = false
-
 export { rsUtils } from './utils';
+let __init__ = false
 
 class AsyncRoute extends React.Component {
     constructor(props) {
@@ -20,8 +19,13 @@ class AsyncRoute extends React.Component {
     }
     componentDidMount () {
         const { beforeEach } = this.props;
+        let to = window[curHistory].route;
+        if (to.redirect) {
+            window[curHistory].push(to.redirect);
+            return
+        }
         beforeEach && beforeEach(
-            window[curHistory].route,
+            to,
             window[preHistory].route,
             (params) => {
                 if (params && params.path) {
@@ -45,6 +49,18 @@ class AsyncRoute extends React.Component {
         return this.state.finished ? wp : null
     }
 }
+/**
+ * 1 重复路由跳转问题；包括重定向前后一样的路由
+ * 2 所有：路由参数 的考虑(无需考虑锚点)
+ * 3 跳转不存在路由去跳转404 ；包括find方法中容错处理
+ */
+
+/**
+ * promp(ifEqual) --> beforeEach --> next() --> push( to/redirect )
+ *         |               |  
+ *       return            |  -->  next({path}) --> push( path/redirect )
+ *                     
+ * */
 class RouterStrong extends React.Component {
     constructor(props) {
         super();
@@ -60,58 +76,67 @@ class RouterStrong extends React.Component {
         isSwitch: PropTypes.bool,
     }
     __beforeEach (location, action) {
-        // console.log("location:", location, "\n", "action:", action)
-        const { pathname } = location
+        console.log('window[curHistory]', window[curHistory])
+
+        const { pathname, search } = location
         const { beforeEach } = this.props
 
+        let getUrl = (pathname) => pathname + search
         this.pendding = true;
-        let to = getRoute(pathname);
-        beforeEach && beforeEach(
-            to,
-            window[preHistory].route,
-            (params) => {
-                this.pendding = false
-                if (to.redirect) {
-                    window[curHistory].push(to.redirect);
-                    return
-                }
-                if (params && params.path) {
-                    let r = getRoute(params.path)
-                    if (r.redirect) {
-                        window[curHistory].push(r.redirect);
-                        return
-                    }
-                    window[curHistory].push(params.path);
-                    return
-                }
-                if (action === 'POP') {
-                    //回退
-                    console.log("Backing up...")
-                    window[curHistory].goBack()
-                } else {
-                    //跳转
-                    console.log(`window[curHistory].push(${pathname})`)
-                    window[curHistory].push(pathname)
-                }
+        const to = getRoute(pathname);
+        const from = window[curHistory].route;
+        const next = (params) => {
+            this.pendding = false
+            if (to.redirect) {
+                window[curHistory].push(getUrl(to.redirect));
+                return
             }
-        );
+            if (params && params.path) {
+                let r = getRoute(params.path)
+                if (r.redirect) {
+                    window[curHistory].push(getUrl(r.redirect));
+                    return
+                }
+                window[curHistory].push(getUrl(params.path));
+                return
+            }
+            if (action === 'POP') {
+                //回退
+                console.log("Backing up...")
+                window[curHistory].goBack()
+            } else {
+                //跳转
+                console.log(`window[curHistory].push(${pathname})`)
+                window[curHistory].push(getUrl(pathname))
+            }
+        }
+        beforeEach && beforeEach(to, from, next);
         return !beforeEach
     }
     __Prompt () {
         return (
             <Prompt
                 message={(location, action) => {
+                    console.log('Prompt-----')
+                    console.log("location:", location, "\n", "action:", action)
+
                     // if (action === 'POP') {
-                    //     console.log("Backing up...")
+                    //     return true
                     // }
                     if (!this.pendding) {
                         return true
+                    }
+                    let islocationEqual = locationEqual(window[curHistory].location, location)
+                    console.log('locationEqual', islocationEqual)
+                    if (islocationEqual) {
+                        return false
                     }
                     return this.__beforeEach(location, action);
                 }}
             />
         )
     }
+
     render () {
         const {
             routes = [],
@@ -139,7 +164,8 @@ class RouterStrong extends React.Component {
                         window[preHistory] = window[curHistory] || {};
                         window[curHistory] = props.history;
                         console.log('render-props', props);
-                        this.pendding = true
+                        this.pendding = !!beforeEach
+
                         const merge = {
                             ...props,
                             route: r
@@ -149,7 +175,7 @@ class RouterStrong extends React.Component {
                         }
                         let wp = wrapParent(r, null, merge)
                         return __init__ ? wp : <AsyncRoute wp={wp} beforeEach={beforeEach} />
-                    },
+                    }
                 });
 
                 return <Route {...routeParams(r)} />
@@ -176,7 +202,7 @@ class RouterStrong extends React.Component {
             return inorder(r)
         }).flat().filter(Boolean);
         AllRoutes = AllRoutes.concat([
-            <Route key={indexPath} exact path="/" render={() => <Redirect to={indexPath} push />} />,
+            <Route key={indexPath} exact path="/" render={() => <Redirect to={indexPath} />} />,
             <Route key={noFoundPath} render={() => <Redirect to={noFoundPath} />} />
         ]);
         window[__win_AllRoutes] = AllRoutes;

@@ -28,7 +28,7 @@ export { rsUtils } from './utils';
 class RouterStrong extends React.Component {
     constructor(props) {
         super();
-        this.promptPendding = false
+        this.promptPendding = !!props.beforeEach;
         /**
          *  Promp (true) --> Route( render)
          */
@@ -52,10 +52,21 @@ class RouterStrong extends React.Component {
         //     return true
         // }
         console.log('this.promptPendding', this.promptPendding)
+
         if (!this.promptPendding) {
+            //★★★重点★★★
+            //跳转相同的pathname的时候不能在组件里重置promptPendding
+            if (location.pathname === window[curHistory].location.pathname) {
+                this.promptPendding = true
+            }
             return true
         }
-        return __beforeEach.call(this, 'prompt', location, action);
+        //切换的时候，有beforeEach为false阻止跳转
+        return __beforeEach.call(this, {
+            state: 'prompt',
+            location,
+            action
+        });
     }
     render() {
         const {
@@ -77,7 +88,7 @@ class RouterStrong extends React.Component {
                         props.history = { ...props.history, route: r };
                         window[preHistory] = window[curHistory] || {};
                         window[curHistory] = props.history;
-                        console.log('render-props', props);
+                        //console.log('render-props', props);
                         const merge = {
                             ...props,
                             route: r

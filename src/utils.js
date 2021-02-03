@@ -49,62 +49,52 @@ export const completeAllRoutes = (routesArr, indexPath, noFoundPath) => {
     window[__win_AllRoutes] = routesArr;
     return routesArr
 }
-export function __beforeEach(state, location, action) {
+export function __beforeEach(params) {
     const { beforeEach } = this.props;
-    const [pre, cur] = [window[preHistory], window[curHistory]];
-    console.log('pre:', pre, '\n', 'cur', cur)
-    console.log('state-----', state)
+    const { state, afterEach, location, action } = params;
+    const [pre, cur] = [window[preHistory] || {}, window[curHistory] || {}];
     if (state === 'mount') {
-        const to = window[curHistory].route;
-        const from = window[preHistory].route;
-        if (to.redirect) {
-            window[curHistory].push(to.redirect);
-            return
-        }
-        beforeEach && beforeEach(to, from, (params) => {
+        const [to, from] = [cur.location, null]
+        beforeEach(to, from, (params = {}) => {
+            if (params && typeof params !== 'object') {
+                throw TypeError('params type must be object')
+            }
             if (params && params.path) {
-                let r = getRoute(params.path)
-                window[curHistory].push(r.redirect || params.path);
+                cur.push(params.path);
                 return
             }
             this.setState({
                 finished: true
+            }, () => {
+                afterEach()
             })
         });
     } else if (state === 'prompt') {
-        // console.log('window[curHistory]', window[curHistory])
 
-        const { pathname, search } = location
+        console.log('location', location)
         if (locationEqual(cur.location, location)) {
             return false
         }
-        let getUrl = (pathname) => pathname + search
-        this.promptPendding = true;
-        const to = getRoute(pathname);
-        const from = window[curHistory] ? window[curHistory].route : null;
+        const { pathname, search } = location
+        const [to, from] = [location, cur.location]
         const next = (params) => {
-            this.promptPendding = false
-            if (to.redirect) {
-                window[curHistory].push(getUrl(to.redirect));
-                return
+            if (params && typeof params !== 'object') {
+                throw TypeError('params type must be object')
             }
+            //此处置为false为了next跳转时prompt能顺利跳转
+            this.promptPendding = false
+
             if (params && params.path) {
-                let r = getRoute(params.path)
-                if (r.redirect) {
-                    window[curHistory].push(getUrl(r.redirect));
-                    return
-                }
-                window[curHistory].push(getUrl(params.path));
+                cur.push(params.path);
                 return
             }
             if (action === 'POP') {
                 //回退
                 console.log("Backing up...")
-                window[curHistory].goBack()
+                cur.goBack()
             } else {
-                //跳转
-                console.log(`window[curHistory].push(${pathname})`)
-                window[curHistory].push(getUrl(pathname))
+                //跳转,补全search
+                cur.push(pathname + search)
             }
         }
         beforeEach && beforeEach(to, from, next);

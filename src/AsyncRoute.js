@@ -13,21 +13,34 @@ class AsyncRoute extends React.Component {
         beforeEach: PropTypes.func,
     }
     componentDidMount() {
-        console.log('AsyncRoute:componentDidMount');
         const { beforeEach, afterEach, isPrompt, setPromptPendding } = this.props;
-        if (beforeEach) {
-            setPromptPendding(true)
-            if (!isPrompt) {
-                __beforeEach.call(this, 'mount')
+        if (!isPrompt) {//首次加载不走prompt
+            //首次加载的时候在mouted里做异步
+            if (beforeEach) {
+                __beforeEach.call(this, {
+                    state: 'mount',
+                    afterEach,// 首次加载的afterEach
+                })
+            } else {
+                afterEach && afterEach()
             }
-        }
-        if (afterEach) {
-            afterEach()
+        } else {//切换的时候在prompt组件中做异步
+            if (beforeEach) {
+                //切换完毕后
+                //重置 prompt 的 pedding状态
+                setPromptPendding(true)
+            }
+            if (afterEach) {
+                afterEach()
+            }
         }
     }
     render() {
         const { wp, beforeEach, isPrompt } = this.props;
-        if (isPrompt) return wp;
+        if (isPrompt) {
+            //切换的时候在prompt里做异步，此组件变为同步组件
+            return wp
+        };
         return (!beforeEach || this.state.finished) ? wp : null
     }
 }

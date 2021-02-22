@@ -1,8 +1,11 @@
 
 import React from 'react'
 import { Route, Redirect } from 'react-router-dom';
-
 import { __win_AllRoutes, preHistory, curHistory } from './key'
+export const log = function () {
+    if (process.env.NODE_ENV === 'production') return;
+    console.log(...arguments)
+}
 export const wrapParent = (r, comp = null, props) => {
     let target = r.component ? <r.component  {...props}> {r.children ? comp : null}</r.component> : null;
     if (r.__parent && r.__parent.component) {
@@ -41,18 +44,40 @@ export const inorderRoutes = (r, route, res = []) => {
     }
     return res
 }
+export function findInRoute(path, route) {
+    if (route.children && route.children.length) {
+        return route.find(d => d.path === path)
+    } else {
+        return false
+    }
+}
 export const completeAllRoutes = (routesArr, indexPath, noFoundPath) => {
     routesArr = routesArr.concat([
-        indexPath ? <Route key={indexPath} exact path="/" render={() => <Redirect to={indexPath} />} /> : null,
+        indexPath ? <Route key={'/'} exact path="/" render={() => <Redirect to={indexPath} />} /> : null,
         noFoundPath ? <Route key={noFoundPath} render={() => <Redirect to={noFoundPath} />} /> : null
     ]).filter(Boolean);
     window[__win_AllRoutes] = routesArr;
+    log('routesArr', routesArr)
     return routesArr
+}
+export function push(url) {
+    if (window[curHistory]) {
+        window[curHistory].push(url)
+    } else {
+        // createHistory().push(url)
+        window.location.href = url
+    }
 }
 export function __beforeEach(params) {
     const { beforeEach } = this.props;
-    const { state, afterEach, location, action } = params;
+    let { state, afterEach, action } = params;
+
     const [pre, cur] = [window[preHistory] || {}, window[curHistory] || {}];
+    let location = params.location || cur.location
+
+    log('cur', cur);
+    log('location', location);
+    log(state)
     if (state === 'mount') {
         const [to, from] = [cur.location, null]
         beforeEach(to, from, (params = {}) => {
@@ -60,7 +85,7 @@ export function __beforeEach(params) {
                 throw TypeError('params type must be object')
             }
             if (params && params.path) {
-                cur.push(params.path);
+                push(params.path);
                 return
             }
             this.setState({
@@ -71,7 +96,6 @@ export function __beforeEach(params) {
         });
     } else if (state === 'prompt') {
 
-        console.log('location', location)
         if (locationEqual(cur.location, location)) {
             return false
         }
@@ -85,16 +109,16 @@ export function __beforeEach(params) {
             this.promptPendding = false
 
             if (params && params.path) {
-                cur.push(params.path);
+                push(params.path);
                 return
             }
             if (action === 'POP') {
                 //回退
-                console.log("Backing up...")
+                log("Backing up...")
                 cur.goBack()
             } else {
                 //跳转,补全search
-                cur.push(pathname + search)
+                push(pathname + search)
             }
         }
         beforeEach && beforeEach(to, from, next);

@@ -7,7 +7,7 @@ npm install react-router-strong --save
  
 ```
 
-
+[codesandbox在线demo](https://codesandbox.io/s/zen-feynman-6q6ef)
 ---
 
 ```javascript
@@ -19,7 +19,7 @@ import Car from './views/Car'
 import BWM from './views/BWM'
  
 
-const routes = [
+const config = [
     {
         path: "/app",
         component: Layout,
@@ -40,6 +40,13 @@ const routes = [
         ]
     },
 ]
+
+const sleep = (time) => new Promise((resolve) => {
+    setTimeout(() => {
+        resolve()
+    }, time)
+})
+
 export default () => (
     <div className="app">
         <RouterStrong
@@ -47,7 +54,14 @@ export default () => (
             noFoundPath='/404'
             mode={'history'}
             isSwitch={true}
-            routes={routes}
+            config={config}
+             beforeEach={async (to, from, next) => {
+                await sleep(2000)
+                next()
+            }}
+            afterEach={() => {
+                console.log('--------------afterEach-----------------------')
+            }}
         >
         </RouterStrong>
     </div>

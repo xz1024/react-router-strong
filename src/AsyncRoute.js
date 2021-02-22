@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { __beforeEach } from './utils'
+import { __beforeEach, log } from './utils'
+import { __init } from './key'
 
 class AsyncRoute extends React.Component {
     constructor(props) {
@@ -13,10 +14,15 @@ class AsyncRoute extends React.Component {
         beforeEach: PropTypes.func,
     }
     componentDidMount() {
+        log('AsyncRoute:componentDidMount')
         const { beforeEach, afterEach, isPrompt, setPromptPendding } = this.props;
-        if (!isPrompt) {//首次加载不走prompt
+        log('window[__init]', window[__init])
+        if (!isPrompt || !window[__init]) {//首次加载不走prompt
+            window[__init] = true;
+
             //首次加载的时候在mouted里做异步
             if (beforeEach) {
+
                 __beforeEach.call(this, {
                     state: 'mount',
                     afterEach,// 首次加载的afterEach
@@ -36,12 +42,13 @@ class AsyncRoute extends React.Component {
         }
     }
     render() {
+        const { finished } = this.state;
         const { wp, beforeEach, isPrompt } = this.props;
-        if (isPrompt) {
-            //切换的时候在prompt里做异步，此组件变为同步组件
+        if (isPrompt && window[__init]) {//且首次加载的情况下
+            //切换的时候在prompt里做异步，此组件（AsyncRoute）变为同步组件
             return wp
         };
-        return (!beforeEach || this.state.finished) ? wp : null
+        return (!beforeEach || finished) ? wp : null
     }
 }
 export default AsyncRoute

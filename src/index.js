@@ -5,11 +5,12 @@ import {
     wrapParent,
     inorderRoutes,
     completeAllRoutes,
-    __beforeEach
+    __beforeEach,
 } from './utils'
 import AsyncRoute from './AsyncRoute'
-import { preHistory, curHistory, __win_AllRoutes } from './key'
+import { preHistory, curHistory, __win_AllRoutes, __init } from './key'
 import { BrowserRouter, HashRouter, Route, Switch, Redirect } from 'react-router-dom';
+import { log } from './utils';
 export { rsUtils } from './utils';
 
 
@@ -45,17 +46,22 @@ class RouterStrong extends React.Component {
         this.isPrompt = true;
         /**
          * 返回值为
-         * true直接执行render
+         * true直接跳转路由
          * false阻断路由跳转
          */
-        // if (action === 'POP') {
-        //     return true
-        // }
-        console.log('this.promptPendding', this.promptPendding)
-
+        //特例：首次加载'/'因为redirect而走的prompt直接通过
+        if (!window[__init]) {
+            return true
+        }
+        // 思路：
+        // 有beforeEach 则跳转前把promptPendding=true
+        // 直到next执行后 promptPendding=false
+        log('promptPendding', this.promptPendding)
         if (!this.promptPendding) {
             //★★★重点★★★
-            //跳转相同的pathname的时候不能在组件里重置promptPendding
+            //跳转相同的pathname的时候
+            //因为不会重新render组件，故不能在组件里重置promptPendding
+            //只能在这里重置
             if (location.pathname === window[curHistory].location.pathname) {
                 this.promptPendding = true
             }
@@ -71,7 +77,7 @@ class RouterStrong extends React.Component {
     render() {
         const {
             config, mode, isSwitch = true,
-            indexPath, noFoundPath, beforeEach, afterEach
+            indexPath, noMatch, beforeEach, afterEach
         } = this.props;
 
         const Router = mode === 'history' ? BrowserRouter : HashRouter;
@@ -88,7 +94,7 @@ class RouterStrong extends React.Component {
                         props.history = { ...props.history, route: r };
                         window[preHistory] = window[curHistory] || {};
                         window[curHistory] = props.history;
-                        //console.log('render-props', props);
+                        //log('render-props', props);
                         const merge = {
                             ...props,
                             route: r
@@ -113,7 +119,7 @@ class RouterStrong extends React.Component {
             };
             return inorderRoutes(r, route, []);
         }).flat();
-        let AllRoutes = completeAllRoutes(routesArr, indexPath, noFoundPath);
+        let AllRoutes = completeAllRoutes(routesArr, indexPath, noMatch);
         return (
             <Router>
                 <Prompt message={this.message.bind(this)} />

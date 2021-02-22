@@ -14,7 +14,7 @@ class AsyncRoute extends React.Component {
         beforeEach: PropTypes.func,
     }
     componentDidMount() {
-        log('AsyncRoute:componentDidMount')
+        //log('AsyncRoute:componentDidMount')
         const { beforeEach, afterEach, isPrompt, setPromptPendding } = this.props;
         log('window[__init]', window[__init])
         if (!isPrompt || !window[__init]) {//首次加载不走prompt

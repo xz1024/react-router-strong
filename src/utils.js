@@ -3,8 +3,8 @@ import React from 'react'
 import { Route, Redirect } from 'react-router-dom';
 import { __win_AllRoutes, preHistory, curHistory } from './key'
 export const log = function () {
-    if (process.env.NODE_ENV === 'production') return;
-    console.log(...arguments)
+    // if (process.env.NODE_ENV === 'production') return;
+    // console.log(...arguments)
 }
 export const wrapParent = (r, comp = null, props) => {
     let target = r.component ? <r.component  {...props}> {r.children ? comp : null}</r.component> : null;
